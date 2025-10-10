@@ -6,20 +6,20 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>URM</title>
 		<link rel="stylesheet" href="styles.css">
-		<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 	</head>
 	<body>
-		<main class="flex flex-col h-screen gap-y-6 p-8">
-			<div class="flex flex-1 gap-x-6 gap-y-4 overflow-hidden">
-				<textarea class="bg-neutral-300 rounded w-full" id="code"></textarea>
-				<div class="flex flex-col w-32 gap-y-4 h-full">
-					<span class="text-xl text-[#6D9C9C] text-center">Registers</span>
-					<div id="tape" class="flex flex-col gap-y-2 overflow-y-auto flex-1"></div>
+		<main>
+			<div class="code-section">
+				<textarea id="code"></textarea>
+				<div class="registers">
+					<span class="registers-title">Registers</span>
+					<div id="tape" class="registers-container"></div>
 				</div>
 			</div>
 
-			<div>
+			<div class="buttons">
 				<button id="execute">Execute code</button>
+				<button id="add-reg">Add register</button>
 			</div>
 		</main>
 

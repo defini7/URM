@@ -1,14 +1,41 @@
-let tape = new Map()
+const tapeElement = document.getElementById("tape")
 
-function setTapeValue(key, value) {
-  tape.set(key, value)
-  
-  const maxRegNum = Math.max(tape.keys())
+class Tape {
+  constructor() {
+    this.data = []
+  }
 
-  for (let i = lastMax; i <= maxRegNum; i++) {
-    
+  extend(newSize) {
+    if (newSize > this.data.length) {
+      for (let i = this.data.length; i < newSize; i++) {
+        this.data.push(0)
+
+        const regElem = document.createElement("input")
+        regElem.innerText = 0
+        regElem.id = `reg-${i}`
+        tapeElement.appendChild(regElem)
+      }
+    }
+  }
+
+  set(reg, value) {
+    this.extend(reg)
+    this.data[reg - 1] = value
+    console.log(tapeElement.childNodes, reg)
+    tapeElement.childNodes[reg - 1].innerText = value
+  }
+
+  get(reg) {
+    this.extend(reg)
+    return this.data[reg - 1]
+  }
+
+  size() {
+    return this.data.length
   }
 }
+
+const tape = new Tape()
 
 const INSTRUCTIONS = {
   "z": r => {
@@ -16,10 +43,7 @@ const INSTRUCTIONS = {
   },
 
   "s": r => {
-    if (tape.has(r))
-      tape.set(r, tape.get(r) + 1)
-    else
-      tape.set(r, 1)
+    tape.set(r, tape.get(r) + 1)
   },
 
   "t": (r1, r2) => {
@@ -35,39 +59,35 @@ const INSTRUCTIONS = {
 function parseInstruction(inst) {
   const [opcode, ...args] = inst.split(' ')
 
-  if (!INSTRUCTIONS[opcode])
+  const op = opcode.toLowerCase()
+
+  if (!INSTRUCTIONS[op])
     console.error(`Invalid opcode {opcode}`)
 
-  return INSTRUCTIONS[opcode](...args)
+  return INSTRUCTIONS[op](...(args.map(a => parseInt(a))))
 }
 
 function parseCode(code) {
-  const lines = code.split('\n').filter((line, _) => line.length != 0)
+  const lines = code.split("\n").filter((line, _) => line.length != 0)
 
-  let cursor = 0;
+  let cursor = 0
 
   while (cursor < lines.length) {
     let newCursor = parseInstruction(lines[cursor])
 
     if (newCursor)
-      cursor = newCursor;
+      cursor = newCursor
     else
-      cursor++;
+      cursor++
   }
 }
-
-const tapeElement = document.getElementById("tape")
 
 document.getElementById("execute").onclick = () => {
   parseCode(document.getElementById("code").value)
 }
 
-for (let i = 0; i <= 10; i++) {
-  const btn = document.createElement("button");
-  btn.innerText = i;
-  btn.id = `register-${i}`;
-
-  tapeElement.appendChild(btn);
+document.getElementById("add-reg").onclick = () => {
+  tape.extend(tape.size() + 1)
 }
 
 // z _
