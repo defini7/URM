@@ -1,0 +1,1 @@
+clang urm/src/rope.c urm/src/urm.c urm/src/utils.c tests.c -o tests
