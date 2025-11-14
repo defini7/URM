@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright 2025 defini7. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 #include "../rope.h"
 #include "../utils.h"
 
@@ -22,7 +27,7 @@ int* rope_get(Rope* rope, int index)
         
         while (start < rope->length)
         {
-            rope->data[start] = 0;
+            new_data[start] = 0;
             start++;
         }
     }

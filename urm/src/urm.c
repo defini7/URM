@@ -1,6 +1,12 @@
-#include "../urm.h"
+/*---------------------------------------------------------------------------------------------
+ *  Copyright 2025 defini7. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
+#include "../urm.h"
 #include <string.h>
+
+#define ERROR_ALLOC_MSG "can't alloc memory for an instruction while parsing code"
 
 char urm__to_lower(char c)
 {
@@ -20,45 +26,59 @@ inline bool urm__is_numeric(char c)
     return '0' <= c && c <= '9';
 }
 
-void urm__exec_inst(ExecState* es)
+void urm__exec_inst(UrmExecState* es)
 {
-    if (es->inst == Ps_Inst_Z)
+    UrmLine* line = es->line;
+
+    switch (line->inst)
     {
-        rope_set(es->rope, es->args[0], 0);
+    case Ps_Inst_Z:
+    {
+        rope_set(es->rope, line->args[0], 0);
         es->next_line++;
     }
-    else if (es->inst == Ps_Inst_S)
-    {
-        int value = *rope_get(es->rope, es->args[0]) + 1;
+    break;
 
-        rope_set(es->rope, es->args[0], value);
-
-        es->next_line++;
-    }
-    else if (es->inst == Ps_Inst_T)
+    case Ps_Inst_S:
     {
-        int src = *rope_get(es->rope, es->args[0]);
-        rope_set(es->rope, es->args[1], src);
+        int value = *rope_get(es->rope, line->args[0]) + 1;
+
+        rope_set(es->rope, line->args[0], value);
 
         es->next_line++;
     }
-    else if (es->inst == Ps_Inst_J)
+    break;
+
+    case Ps_Inst_T:
     {
-        int first = *rope_get(es->rope, es->args[0]);
-        int second = *rope_get(es->rope, es->args[1]);
+        int src = *rope_get(es->rope, line->args[0]);
+        rope_set(es->rope, line->args[1], src);
+
+        es->next_line++;
+    }
+    break;
+    
+    case Ps_Inst_J:
+    {
+        int first = *rope_get(es->rope, line->args[0]);
+        int second = *rope_get(es->rope, line->args[1]);
 
         if (first == second)
-            es->next_line = es->args[2] - 1;
+            es->next_line = line->args[2] - 1;
         else
             es->next_line++;
     }
+    break;
+
+    }
 }
 
-ParseState urm__on_char_parse(ExecState* es)
+int urm__on_char_parse(UrmParseState* ps)
 {
-    char c = es->cur_char;
+    char c = ps->cur_char;
+    UrmLine* cur_line = &(*ps->cur_line)->data;
 
-    switch (es->state)
+    switch (ps->state)
     {
     case Ps_NewInst:
     {
@@ -69,10 +89,10 @@ ParseState urm__on_char_parse(ExecState* es)
 
         switch (c1)
         {
-        case 'z': es->inst = Ps_Inst_Z; break;
-        case 's': es->inst = Ps_Inst_S; break;
-        case 't': es->inst = Ps_Inst_T; break;
-        case 'j': es->inst = Ps_Inst_J; break;
+        case 'z': cur_line->inst = Ps_Inst_Z; break;
+        case 's': cur_line->inst = Ps_Inst_S; break;
+        case 't': cur_line->inst = Ps_Inst_T; break;
+        case 'j': cur_line->inst = Ps_Inst_J; break;
         default: panic("invalid instruction: %c", c);
         }
 
@@ -87,8 +107,8 @@ ParseState urm__on_char_parse(ExecState* es)
 
         if (urm__is_numeric(c))
         {
-            es->num_index = 0;
-            es->num[0] = c;
+            ps->num_index = 0;
+            ps->num[0] = c;
             return Ps_ParseArg;
         }
 
@@ -101,19 +121,15 @@ ParseState urm__on_char_parse(ExecState* es)
         if (urm__is_space(c))
         {
             int d = 1;
-            for (int i = es->num_index; i >= 0; i--, d *= 10)
-                es->args[es->args_read] += (int)(es->num[i] - '0') * d;
+            for (int i = ps->num_index; i >= 0; i--, d *= 10)
+                cur_line->args[ps->args_read] += (int)(ps->num[i] - '0') * d;
 
-            es->args_read++;
+            ps->args_read++;
 
-            if (es->args_read >= MAX_ARGS[es->inst])
+            if (ps->args_read >= MAX_ARGS[cur_line->inst])
             {
-                urm__exec_inst(es);
-                
-                for (int i = 0; i < es->args_read; i++)
-                    es->args[i] = 0;
-
-                es->args_read = 0;
+                ps->args_read = 0;
+                ps->lines_count++;
 
                 return Ps_MoveToNextLine;
             }
@@ -124,32 +140,83 @@ ParseState urm__on_char_parse(ExecState* es)
         if (!urm__is_numeric(c))
             panic("arguments must be numeric values, not: %c", c);
 
-        es->num[es->num_index] = c;
+        ps->num[ps->num_index] = c;
         return Ps_ParseArg;
     }
     break;
 
     }
+
+    return Ps_MoveToNextLine;
 }
 
-void urm_exec(Rope* rope, const TextBuffer* code)
+UrmLines urm_parse(const TextBuffer* code)
 {
-    ExecState es = {0};
+    UrmParseState ps = {0};
+    ps.cur_line = &ps.lines;
+
+    for (int i = 0; i < code->lines_count; i++)
+    {
+        ps.state = Ps_NewInst;
+
+        *ps.cur_line = calloc(1, sizeof(UrmLinesNode));
+        assert(*ps.cur_line != NULL, ERROR_ALLOC_MSG);
+
+        int len = strlen(code->lines[i]);
+
+        for (int j = 0; j <= len && ps.state != Ps_MoveToNextLine; j++)
+        {
+            ps.cur_char =
+                (j == len) ? ' ' :
+                code->lines[i][j];
+
+            ps.state = urm__on_char_parse(&ps);
+        }
+
+        ps.cur_line = &(*ps.cur_line)->next;
+    }
+
+    UrmLines lines = {
+        .data=malloc(sizeof(UrmLine) * ps.lines_count),
+        .count=ps.lines_count
+    };
+
+    assert(lines.data != NULL, ERROR_ALLOC_MSG);
+
+    UrmLinesNode* line = ps.lines;
+
+    for (int i = 0; line != NULL; i++)
+    {
+        lines.data[i] = line->data;
+        line = line->next;
+    }
+
+    return lines;
+}
+
+void urm_exec(const UrmLines lines, Rope* rope, int max_insts)
+{
+    UrmExecState es = {0};
     es.rope = rope;
 
-    while (es.next_line < code->lines_count)
+    for (int i = 0; es.next_line < lines.count && i < max_insts; i++)
     {
-        es.state = Ps_NewInst;
-
-        int len = strlen(code->lines[es.next_line]);
-        
-        for (int i = 0; i <= len && es.state != Ps_MoveToNextLine; i++)
-        {
-            es.cur_char =
-                (i == len) ? ' ' :
-                code->lines[es.next_line][i];
-
-            es.state = urm__on_char_parse(&es);
-        }
+        es.line = &lines.data[es.next_line];
+        urm__exec_inst(&es);
     }
+}
+
+void urm_do_raw(const TextBuffer* code, Rope* rope, int max_insts)
+{
+    const UrmLines lines = urm_parse(code);
+    
+    urm_exec(lines, rope, max_insts);
+}
+
+void urm_do_file(const char* filename, Rope* rope, int max_insts)
+{
+    const TextBuffer code = read_file(filename);
+    const UrmLines lines = urm_parse(&code);
+
+    urm_exec(lines, rope, max_insts);
 }

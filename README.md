@@ -1,6 +1,6 @@
-# URM (Unlimited Registers Machine)
+# Cutland URM (Unlimited Registers Machine)
 
-# [How does it work?](https://www.deepnet42.com/post/2023/02/10/an-unlimited-register-machine/)
+# [What it is all about](https://www.deepnet42.com/post/2023/02/10/an-unlimited-register-machine/)
 
 # Implementation details
 
@@ -10,13 +10,20 @@
 
 # Syntax
 
+In Cutland's URM we would write
+```c
+J(1,2,3)
 ```
-<instruction> <arg_1> <arg_2> ... <arg_n>
+
+but here we would write
+
+```c
+J 1 2 3
 ```
 
 # Example
 
-```cpp
+```c
 #include "urm/urm.h"
 
 int main()
@@ -32,3 +39,7 @@ int main()
     assert(*rope_get(&rope, 0) == 7, "5 + 2 != 7");
 }
 ```
+
+# References
+
+- "Computability: An Introduction to Recursive Function Theory" by Nigel Cutland

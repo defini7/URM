@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright 2025 defini7. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 #include "../utils.h"
 
 #include <stdarg.h>
@@ -67,7 +72,7 @@ void panic(const char* format, ...)
     va_list list;
     va_start(list, format);
 
-    fprintf(stderr, "[URM Error]: ");
+    fprintf(stderr, "[URM Error] ");
     vfprintf(stderr, format, list);
 
     va_end(list);
